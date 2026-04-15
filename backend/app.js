@@ -10,6 +10,10 @@ const sequelize = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 
 const app = express();
+const productRoutes = require("./routes/productRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const deliveryRoutes = require("./routes/deliveryRoutes");
+
 console.log("DB USER:", process.env.DB_USER);
 console.log("DB PASS:", process.env.DB_PASS);
 // Middlewares
@@ -18,6 +22,9 @@ app.use(express.json());
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/products", productRoutes);
+app.use("/orders", orderRoutes);
+app.use("/deliveries", deliveryRoutes);
 
 // Test route
 app.get("/", (req, res) => {
