@@ -7,3 +7,7 @@ exports.createUser = (data) => {
 exports.findByEmail = (email) => {
   return User.findOne({ where: { email } });
 };
+
+exports.findAll = () => {
+  return User.findAll();
+};
