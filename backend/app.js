@@ -10,7 +10,8 @@ const sequelize = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 
 const app = express();
-
+console.log("DB USER:", process.env.DB_USER);
+console.log("DB PASS:", process.env.DB_PASS);
 // Middlewares
 app.use(cors());
 app.use(express.json());
