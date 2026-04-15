@@ -33,9 +33,13 @@ app.get("/", (req, res) => {
 
 // Connexion DB + démarrage serveur
 const PORT = process.env.PORT || 5000;
-
+require("./models/User");
+require("./models/Product");
+require("./models/Order");
+require("./models/OrderItem");
+require("./models/Delivery");
 sequelize
-  .sync()
+  .sync({ force: true })
   .then(() => {
     console.log("Database synced");
     app.listen(PORT, () => {

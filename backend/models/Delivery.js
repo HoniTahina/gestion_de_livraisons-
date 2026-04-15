@@ -6,6 +6,9 @@ const Delivery = sequelize.define("Delivery", {
     type: DataTypes.STRING,
     defaultValue: "PENDING",
   },
+  deliveryPersonId: {
+    type: DataTypes.INTEGER,
+  }
 });
 
 module.exports = Delivery;

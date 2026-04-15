@@ -19,5 +19,5 @@ Delivery.belongsTo(Order);
 Order.hasOne(Delivery);
 
 // relation avec livreur (User)
-Delivery.belongsTo(User, { as: "deliveryPerson" });
+Delivery.belongsTo(User, { foreignKey: "deliveryPersonId" });
 User.hasMany(Delivery, { foreignKey: "deliveryPersonId" });
