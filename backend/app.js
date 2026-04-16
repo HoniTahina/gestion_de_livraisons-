@@ -145,8 +145,27 @@ const syncAndSeed = async () => {
   }
 };
 
+const waitForDatabase = async (maxRetries = 30, delayMs = 1000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await sequelize.authenticate();
+      console.log("✓ Database connection successful");
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) {
+        throw new Error(`Failed to connect to database after ${maxRetries} attempts: ${err.message}`);
+      }
+      console.log(`[${attempt}/${maxRetries}] Database not ready yet, retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+};
+
 const startServer = async () => {
   try {
+    // Attendre que la base de données soit prête
+    await waitForDatabase();
+    
     if (process.env.AUTO_DB_BACKUP !== "false") {
       try {
         const backup = await createDbBackup();
