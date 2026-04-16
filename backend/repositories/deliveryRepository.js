@@ -22,7 +22,7 @@ exports.countActiveByDeliveryPerson = (deliveryPersonId) => {
   return Delivery.count({
     where: {
       deliveryPersonId,
-      status: { [Op.in]: ["ASSIGNED", "IN_TRANSIT"] },
+      status: { [Op.in]: ["PROCESSING", "ASSIGNED", "IN_TRANSIT"] },
     },
   });
 };

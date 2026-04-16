@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+const getDeliveryStatusLabel = (status) => {
+  if (status === 'ASSIGNED') return 'Traitement de livraison';
+  if (status === 'PROCESSING') return 'Traitement de livraison';
+  if (status === 'IN_TRANSIT') return 'En cours';
+  if (status === 'DONE') return 'Livree';
+  return status || 'Traitement de livraison';
+};
+
 // TODO: ajouter une pagination si y'a trop de livraisons
 // page pour gérer les livraisons, un peu brouillon mais ça marche
 export default function DeliveriesPage() {
@@ -21,8 +29,7 @@ export default function DeliveriesPage() {
   }, [user]);
 
   useEffect(() => {
-    const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-    if (!baseUrl) return;
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5310').replace(/\/$/, '');
 
     const handlePayload = (raw) => {
       try {
@@ -89,7 +96,7 @@ export default function DeliveriesPage() {
           (order) =>
             order.status === 'PAID' &&
             Array.isArray(order.SubOrders) &&
-            order.SubOrders.some((sub) => !sub.Delivery)
+            order.SubOrders.some((sub) => !sub.Delivery?.deliveryPersonId)
         )
       );
     } catch (err) {
@@ -100,7 +107,7 @@ export default function DeliveriesPage() {
   const updateStatus = async (id, status) => {
     try {
       await api.put(`/deliveries/${id}/status`, { status });
-      setMessage(`Livraison ${id} mise à jour en ${status}`);
+      setMessage(`Livraison ${id} mise a jour en ${getDeliveryStatusLabel(status)}`);
       fetchDeliveries(); // recharger après update
     } catch (err) {
       setMessage('Impossible de mettre à jour le statut');
@@ -110,6 +117,7 @@ export default function DeliveriesPage() {
 
   const getNextStatus = (status) => {
     if (status === 'ASSIGNED') return 'IN_TRANSIT';
+    if (status === 'PROCESSING') return 'IN_TRANSIT';
     if (status === 'IN_TRANSIT') return 'DONE';
     return null;
   };
@@ -176,11 +184,11 @@ export default function DeliveriesPage() {
             <p>Commande : {delivery.SubOrder?.Order?.id || 'N/A'}</p>
             <p>Sous-commande : {delivery.SubOrder?.id || 'N/A'}</p>
             <p>Livreur : {delivery.deliveryPerson?.name || 'Non attribué'}</p>
-            <p>Statut : {delivery.status}</p>
+            <p>Statut : {getDeliveryStatusLabel(delivery.status)}</p>
             {delivery.trackingToken && <p>Tracking : {delivery.trackingToken}</p>}
             {(user?.role === 'admin' || user?.role === 'livreur') && getNextStatus(delivery.status) && (
               <button onClick={() => updateStatus(delivery.id, getNextStatus(delivery.status))}>
-                {delivery.status === 'ASSIGNED' ? 'Passer en transport' : 'Marquer terminée'}
+                {(delivery.status === 'PROCESSING' || delivery.status === 'ASSIGNED') ? 'Passer en transport' : 'Marquer livree'}
               </button>
             )}
           </div>

@@ -16,8 +16,13 @@ export default function ProductsPage() {
   const [message, setMessage] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', price: '', stock: '', category: '' });
-  const { addToCart, cartItemsCount } = useCart();
+  const { addToCart, cartItemsCount, cart } = useCart();
   const { user } = useAuth();
+
+  const getQuantityInCart = (productId) => {
+    const entry = cart.find((item) => String(item.id) === String(productId));
+    return entry ? entry.quantity : 0;
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -121,6 +126,9 @@ export default function ProductsPage() {
       <div style={styles.grid}>
         {filteredProducts.map((product) => (
           <div key={product.id} style={styles.card}>
+            {getQuantityInCart(product.id) > 0 && (
+              <div style={styles.inCartBadge}>Dans le panier: {getQuantityInCart(product.id)}</div>
+            )}
             {editingId === product.id ? (
               <div style={styles.editBox}>
                 <input
@@ -162,7 +170,7 @@ export default function ProductsPage() {
               style={styles.addButton}
               disabled={product.stock === 0}
             >
-              {product.stock === 0 ? 'Rupture' : 'Ajouter au panier'}
+              {product.stock === 0 ? 'Rupture' : `Ajouter au panier${getQuantityInCart(product.id) > 0 ? ` (${getQuantityInCart(product.id)})` : ''}`}
             </button>
             {(user?.role === 'admin' || user?.id === product.vendorId) && (
               editingId === product.id ? (
@@ -261,11 +269,23 @@ const styles = {
     gap: '20px'
   },
   card: {
+    position: 'relative',
     background: 'white',
     padding: '20px',
     borderRadius: '10px',
     boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
     textAlign: 'center'
+  },
+  inCartBadge: {
+    position: 'absolute',
+    top: '10px',
+    right: '10px',
+    background: '#0ea5e9',
+    color: 'white',
+    fontSize: '12px',
+    fontWeight: '700',
+    padding: '4px 8px',
+    borderRadius: '999px'
   },
   editBox: {
     display: 'grid',

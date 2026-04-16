@@ -53,7 +53,9 @@ export default function Layout({ children }) {
         </div>
         <div style={styles.links}>
           <Link to="/" style={styles.link}>Produits</Link>
-          <Link to="/cart" style={styles.link}>Panier ({cartItemsCount})</Link>
+          <Link to="/cart" style={styles.link}>
+            Panier <span style={styles.cartBadge}>{cartItemsCount}</span>
+          </Link>
           <Link to="/orders" style={styles.link}>Commandes</Link>
           <Link to="/deliveries" style={styles.link}>Livraisons</Link>
           {user && <Link to="/profile" style={styles.link}>Profil</Link>}
@@ -118,6 +120,15 @@ const styles = {
     ':hover': {
       backgroundColor: 'rgba(255,255,255,0.1)'
     }
+  },
+  cartBadge: {
+    marginLeft: '6px',
+    backgroundColor: '#22c55e',
+    color: 'white',
+    borderRadius: '999px',
+    padding: '1px 7px',
+    fontSize: '12px',
+    fontWeight: '700'
   },
   userSection: {
     display: 'flex',

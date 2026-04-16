@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -8,16 +8,35 @@ export default function PaymentPage() {
   const { cart, total, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [loading, setLoading] = useState(false);
   const [processingMessage, setProcessingMessage] = useState('');
   const paypalBaseUrl = import.meta.env.VITE_PAYPAL_URL || 'https://www.paypal.com/signin';
+  const existingOrder = location.state?.existingOrder || null;
   const [cardInfo, setCardInfo] = useState({
     number: '',
     expiry: '',
     cvv: '',
     name: ''
   });
+
+  const isExistingOrderPayment = Boolean(existingOrder?.id);
+  const orderItems = useMemo(() => {
+    if (isExistingOrderPayment) {
+      return Array.isArray(existingOrder?.OrderItems) ? existingOrder.OrderItems : [];
+    }
+
+    return cart;
+  }, [cart, existingOrder, isExistingOrderPayment]);
+
+  const payableTotal = useMemo(() => {
+    if (isExistingOrderPayment) {
+      return Number(existingOrder?.total || 0);
+    }
+
+    return total;
+  }, [existingOrder, isExistingOrderPayment, total]);
 
   const detectCardType = (rawNumber) => {
     if (!rawNumber) return 'Inconnue';
@@ -85,7 +104,7 @@ export default function PaymentPage() {
   };
 
   const handlePayment = async () => {
-    if (!cart.length) {
+    if (!orderItems.length) {
       alert('Votre panier est vide');
       return;
     }
@@ -104,17 +123,20 @@ export default function PaymentPage() {
     setLoading(true);
     setProcessingMessage('Redirection vers la page securisee de votre banque...');
     try {
-      // Créer la commande
-      const orderData = {
-        items: cart.map(item => ({
-          productId: item.id,
-          quantity: item.quantity,
-          price: item.price
-        }))
-      };
+      let order = existingOrder;
 
-      const response = await api.post('/orders', orderData);
-      const order = response.data;
+      if (!isExistingOrderPayment) {
+        const orderData = {
+          items: cart.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            price: item.price
+          }))
+        };
+
+        const response = await api.post('/orders', orderData);
+        order = response.data;
+      }
 
       // Simulation d'un flux standard banque/3DS
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -122,13 +144,14 @@ export default function PaymentPage() {
       // Marquer la commande comme payée
       await api.put(`/orders/${order.id}/status`, { status: 'PAID' });
 
-      // Vider le panier
-      clearCart();
+      if (!isExistingOrderPayment) {
+        clearCart();
+      }
 
-      // Rediriger vers la page de confirmation
-      navigate('/orders', {
+      // Rediriger vers la page de suivi de livraison
+      navigate('/deliveries', {
         state: {
-          message: 'Paiement confirme. Votre commande a ete enregistree.',
+          message: 'Paiement confirme. Votre livraison est en cours de traitement.',
           orderId: order.id
         }
       });
@@ -141,11 +164,11 @@ export default function PaymentPage() {
     }
   };
 
-  if (!cart.length) {
+  if (!orderItems.length) {
     return (
       <div style={styles.emptyContainer}>
-        <h2>Votre panier est vide</h2>
-        <p>Retournez à la boutique pour ajouter des produits.</p>
+        <h2>Aucun paiement en attente</h2>
+        <p>Retournez a la boutique ou a vos commandes.</p>
         <button onClick={() => navigate('/')} style={styles.backButton}>
           Retour à la boutique
         </button>
@@ -160,23 +183,23 @@ export default function PaymentPage() {
       <div style={styles.content}>
         {/* Récapitulatif de commande */}
         <div style={styles.orderSummary}>
-          <h3>Récapitulatif de votre commande</h3>
+          <h3>{isExistingOrderPayment ? `Paiement de la commande #${existingOrder.id}` : 'Recapitulatif de votre commande'}</h3>
           <div style={styles.items}>
-            {cart.map((item) => (
+            {orderItems.map((item) => (
               <div key={item.id} style={styles.item}>
                 <div style={styles.itemInfo}>
-                  <h4>{item.name}</h4>
+                  <h4>{item.Product?.name || item.name}</h4>
                   <p>Quantité: {item.quantity}</p>
-                  <p>Vendeur: {item.vendor?.name || 'N/A'}</p>
+                  <p>Vendeur: {item.Product?.vendor?.name || item.vendor?.name || 'N/A'}</p>
                 </div>
                 <div style={styles.itemPrice}>
-                  {(item.price * item.quantity).toFixed(2)} €
+                  {(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)} €
                 </div>
               </div>
             ))}
           </div>
           <div style={styles.total}>
-            <strong>Total: {total.toFixed(2)} €</strong>
+            <strong>Total: {payableTotal.toFixed(2)} €</strong>
           </div>
         </div>
 
@@ -279,7 +302,7 @@ export default function PaymentPage() {
             disabled={loading}
             style={styles.payButton}
           >
-            {loading ? 'Traitement du paiement...' : `Proceder au paiement - ${total.toFixed(2)} €`}
+            {loading ? 'Traitement du paiement...' : `Proceder au paiement - ${payableTotal.toFixed(2)} €`}
           </button>
         </div>
       </div>

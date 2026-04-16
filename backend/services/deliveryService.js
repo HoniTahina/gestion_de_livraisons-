@@ -3,7 +3,8 @@ const orderRepo = require("../repositories/orderRepository");
 const crypto = require("crypto");
 const { publishEvent } = require("../utils/realtime");
 
-const STATUS_FLOW = ["ASSIGNED", "IN_TRANSIT", "DONE"];
+const STATUS_FLOW = ["PROCESSING", "IN_TRANSIT", "DONE"];
+const normalizeStatus = (status) => (status === "ASSIGNED" ? "PROCESSING" : status);
 
 exports.assignDelivery = async (orderId, deliveryPersonId) => {
   const order = await orderRepo.findById(orderId);
@@ -29,16 +30,28 @@ exports.assignDelivery = async (orderId, deliveryPersonId) => {
 
   for (const subOrder of subOrders) {
     const existing = await deliveryRepo.findBySubOrderId(subOrder.id);
-    if (existing) {
+
+    if (existing?.deliveryPersonId) {
       continue;
     }
 
-    const delivery = await deliveryRepo.create({
-      SubOrderId: subOrder.id,
-      deliveryPersonId,
-      status: "ASSIGNED",
-      trackingToken: crypto.randomBytes(8).toString("hex"),
-    });
+    let delivery;
+
+    if (existing) {
+      existing.deliveryPersonId = deliveryPersonId;
+      existing.status = normalizeStatus(existing.status) || "PROCESSING";
+      if (!existing.trackingToken) {
+        existing.trackingToken = crypto.randomBytes(8).toString("hex");
+      }
+      delivery = await existing.save();
+    } else {
+      delivery = await deliveryRepo.create({
+        SubOrderId: subOrder.id,
+        deliveryPersonId,
+        status: "PROCESSING",
+        trackingToken: crypto.randomBytes(8).toString("hex"),
+      });
+    }
 
     created.push(delivery);
   }
@@ -55,7 +68,7 @@ exports.assignDelivery = async (orderId, deliveryPersonId) => {
 };
 
 exports.updateStatus = async (user, deliveryId, status) => {
-  const allowedStatuses = ["ASSIGNED", "IN_TRANSIT", "DONE"];
+  const allowedStatuses = ["PROCESSING", "IN_TRANSIT", "DONE"];
   if (!allowedStatuses.includes(status)) {
     throw new Error("Statut de livraison invalide");
   }
@@ -69,7 +82,7 @@ exports.updateStatus = async (user, deliveryId, status) => {
     throw new Error("Accès refusé");
   }
 
-  const currentIdx = STATUS_FLOW.indexOf(delivery.status);
+  const currentIdx = STATUS_FLOW.indexOf(normalizeStatus(delivery.status));
   const nextIdx = STATUS_FLOW.indexOf(status);
 
   if (currentIdx === -1 || nextIdx === -1 || nextIdx < currentIdx) {

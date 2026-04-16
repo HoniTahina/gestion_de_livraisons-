@@ -27,7 +27,7 @@ const deliveryRoutes = require("./routes/deliveryRoutes");
 const userRoutes = require("./routes/userRoutes");
 
 console.log("DB USER:", process.env.DB_USER);
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5310;
 require("./models"); // Import des modèles et relations
 
 const { User, Product } = require("./models");

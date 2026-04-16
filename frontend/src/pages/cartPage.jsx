@@ -6,14 +6,43 @@ import { useCart } from '../context/CartContext';
 export default function CartPage() {
   const { cart, removeFromCart, increaseQuantity, decreaseQuantity, clearCart, total } = useCart();
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handlePayment = () => {
+  const handleNext = async () => {
     if (cart.length === 0) {
       setMessage('Votre panier est vide');
       return;
     }
-    navigate('/payment');
+
+    setLoading(true);
+
+    try {
+      const orderData = {
+        items: cart.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      };
+
+      const response = await api.post('/orders', orderData);
+      const order = response.data;
+
+      clearCart();
+      navigate('/orders', {
+        state: {
+          message: `Commande #${order.id} creee. Verifiez-la puis passez au paiement.`,
+          createdOrderId: order.id,
+        },
+      });
+    } catch (err) {
+      console.error('erreur creation commande:', err);
+      const apiMessage = err.response?.data?.error;
+      setMessage(apiMessage || 'Impossible de creer la commande');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -83,8 +112,8 @@ export default function CartPage() {
               <span>Total de la commande:</span>
               <span style={styles.totalAmount}>{total.toFixed(2)} €</span>
             </div>
-            <button onClick={handlePayment} style={styles.payButton}>
-              Procéder au paiement
+            <button onClick={handleNext} style={styles.payButton} disabled={loading}>
+              {loading ? 'Creation de la commande...' : 'Suivant'}
             </button>
           </div>
         </>

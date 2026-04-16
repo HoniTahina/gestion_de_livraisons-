@@ -7,6 +7,11 @@ jest.mock('../../repositories/orderRepository', () => ({
   findById: jest.fn(),
 }));
 
+jest.mock('../../repositories/deliveryRepository', () => ({
+  findBySubOrderId: jest.fn(),
+  create: jest.fn(),
+}));
+
 jest.mock('../../repositories/orderItemRepository', () => ({
   create: jest.fn(),
 }));
@@ -24,9 +29,14 @@ jest.mock('../../config/db', () => ({
   transaction: jest.fn(async (work) => work({ LOCK: { UPDATE: 'UPDATE' } })),
 }));
 
+jest.mock('../../utils/realtime', () => ({
+  publishEvent: jest.fn(),
+}));
+
 const orderService = require('../../services/orderService');
 const orderRepo = require('../../repositories/orderRepository');
 const orderItemRepo = require('../../repositories/orderItemRepository');
+const deliveryRepo = require('../../repositories/deliveryRepository');
 const { Product, SubOrder } = require('../../models');
 
 describe('orderService.createOrder', () => {
@@ -98,5 +108,34 @@ describe('orderService.createOrder', () => {
         [{ productId: 1, quantity: 1 }]
       )
     ).rejects.toThrow('Stock insuffisant');
+  });
+
+  it('creates delivery placeholders when a client pays an order', async () => {
+    const order = {
+      id: 77,
+      UserId: 33,
+      status: 'PENDING',
+      SubOrders: [
+        { id: 201 },
+        { id: 202, Delivery: { id: 999 } },
+      ],
+      save: jest.fn(),
+    };
+
+    orderRepo.findById.mockResolvedValue(order);
+    deliveryRepo.findBySubOrderId.mockResolvedValue(null);
+    deliveryRepo.create.mockResolvedValue({ id: 5001 });
+
+    await orderService.updateOrderStatus({ id: 33, role: 'client' }, 77, 'PAID');
+
+    expect(order.status).toBe('PAID');
+    expect(order.save).toHaveBeenCalledTimes(1);
+    expect(deliveryRepo.create).toHaveBeenCalledTimes(1);
+    expect(deliveryRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        SubOrderId: 201,
+        status: 'PROCESSING',
+      })
+    );
   });
 });

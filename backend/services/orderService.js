@@ -1,9 +1,33 @@
 const orderRepo = require("../repositories/orderRepository");
 const orderItemRepo = require("../repositories/orderItemRepository");
+const deliveryRepo = require("../repositories/deliveryRepository");
 const { Product, SubOrder } = require("../models");
 const sequelize = require("../config/db");
+const crypto = require("crypto");
+const { publishEvent } = require("../utils/realtime");
 
 const COMMISSION_RATE = 0.05; // taux de commission pour les vendeurs
+
+const ensureDeliveriesForPaidOrder = async (order) => {
+  const subOrders = Array.isArray(order.SubOrders) ? order.SubOrders : [];
+
+  for (const subOrder of subOrders) {
+    const existingDelivery = subOrder.Delivery || (await deliveryRepo.findBySubOrderId(subOrder.id));
+
+    if (existingDelivery) {
+      continue;
+    }
+
+    const delivery = await deliveryRepo.create({
+      SubOrderId: subOrder.id,
+      status: "PROCESSING",
+      deliveryPersonId: null,
+      trackingToken: crypto.randomBytes(8).toString("hex"),
+    });
+
+    publishEvent("delivery.created", { deliveryId: delivery.id, subOrderId: subOrder.id });
+  }
+};
 
 exports.createOrder = async (user, items) => {
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -40,10 +64,14 @@ exports.createOrder = async (user, items) => {
       groupedByVendor[vendorId].push({ product, quantity });
     }
 
+    const vendorIds = Object.keys(groupedByVendor).map((id) => Number(id)).filter(Number.isFinite);
+    const primaryVendorId = vendorIds.length > 0 ? vendorIds[0] : null;
+
     const order = await orderRepo.create(
       {
         UserId: user.id,
-        vendorId: null,
+        vendorId: primaryVendorId,
+        supplierId: primaryVendorId,
         status: "PENDING",
         total: 0,
         commission: 0,
@@ -157,5 +185,10 @@ exports.updateOrderStatus = async (user, orderId, status) => {
 
   order.status = status;
   await order.save();
+
+  if (status === "PAID") {
+    await ensureDeliveriesForPaidOrder(order);
+  }
+
   return order;
 };

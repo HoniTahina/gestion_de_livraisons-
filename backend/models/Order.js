@@ -18,6 +18,10 @@ const Order = sequelize.define("Order", {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  supplierId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 });
 
 module.exports = Order;

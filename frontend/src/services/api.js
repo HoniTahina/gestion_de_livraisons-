@@ -1,10 +1,6 @@
 import axios from 'axios';
 
-const apiUrl = import.meta.env.VITE_API_URL;
-
-if (!apiUrl) {
-  throw new Error('Variable manquante: VITE_API_URL. Ajoutez-la dans frontend/.env');
-}
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5310';
 
 const api = axios.create({
   baseURL: apiUrl,

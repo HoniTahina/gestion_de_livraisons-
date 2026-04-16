@@ -26,6 +26,10 @@ exports.updateStatus = async (req, res) => {
 };
 
 exports.getDeliveries = async (req, res) => {
-  const deliveries = await deliveryService.getDeliveries(req.user);
-  res.json(deliveries);
+  try {
+    const deliveries = await deliveryService.getDeliveries(req.user);
+    res.json(deliveries);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
