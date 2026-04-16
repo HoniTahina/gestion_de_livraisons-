@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    actor Client
+    participant API
+    participant Commande
+    participant Stock
+    participant Paiement
+    participant Livraison
+
+    Client->>API: POST /orders
+    API->>Commande: verifier utilisateur
+    activate Commande
+    Note right of Commande: commande en attente
+
+    Commande->>Stock: verifier stock
+    Stock-->>Commande: OK
+
+    Note right of Commande: decoupage par vendeur
+    Commande->>Paiement: payer
+    Paiement-->>Commande: paiement accepte
+
+    Commande->>Stock: mise a jour stock
+    Stock-->>Commande: stock mis a jour
+
+    Commande->>Livraison: attribuer livreur
+    Livraison-->>Commande: livraison creee
+
+    Commande-->>API: commande validee
+    deactivate Commande
+    API-->>Client: confirmation + suivi

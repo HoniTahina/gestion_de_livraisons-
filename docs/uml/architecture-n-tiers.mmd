@@ -1,0 +1,31 @@
+flowchart TD
+    subgraph Presentation[Presentation]
+        Web[Frontend]
+        Pages[Pages]
+    end
+
+    subgraph Business[Metier]
+        Routes[Routes]
+        Controllers[Controllers]
+        Services[Services]
+        Auth[Auth]
+        Realtime[Temps reel]
+    end
+
+    subgraph Data[Donnees]
+        Repositories[Repositories]
+        Models[Models]
+        DB[(PostgreSQL)]
+        Cache[Cache]
+    end
+
+    Web --> Pages
+    Pages --> Routes
+    Routes --> Auth
+    Routes --> Controllers
+    Controllers --> Services
+    Services --> Realtime
+    Services --> Repositories
+    Services --> Cache
+    Repositories --> Models
+    Models --> DB

@@ -1,52 +1,161 @@
 const orderRepo = require("../repositories/orderRepository");
 const orderItemRepo = require("../repositories/orderItemRepository");
-const productRepo = require("../repositories/productRepository");
+const { Product, SubOrder } = require("../models");
+const sequelize = require("../config/db");
 
-exports.createOrder = async (userId, items) => {
-  let total = 0;
+const COMMISSION_RATE = 0.05; // taux de commission pour les vendeurs
 
-  // créer commande
-  const order = await orderRepo.create({
-    UserId: userId,
-    status: "PENDING",
-    total: 0,
-  });
-
-  // traiter les produits
-  for (const item of items) {
-    const product = await productRepo.findById(item.productId);
-
-    if (!product) {
-      throw new Error("Produit introuvable");
-    }
-
-    if (product.stock < item.quantity) {
-      throw new Error("Stock insuffisant pour " + product.name);
-    }
-
-    // calcul total
-    const price = product.price * item.quantity;
-    total += price;
-
-    // créer order item
-    await orderItemRepo.create({
-      OrderId: order.id,
-      ProductId: product.id,
-      quantity: item.quantity,
-      price: product.price,
-    });
-
-    // mise à jour stock
-    product.stock -= item.quantity;
-    await product.save();
+exports.createOrder = async (user, items) => {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    throw new Error("Le panier est vide");
   }
 
-  order.total = total;
-  await order.save();
+  return sequelize.transaction(async (transaction) => {
+    const groupedByVendor = {};
 
-  return order;
+    for (const item of items) {
+      const quantity = Number(item.quantity);
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        throw new Error("Quantite invalide");
+      }
+
+      const product = await Product.findByPk(item.productId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!product) {
+        throw new Error(`Produit introuvable : ${item.productId}`);
+      }
+
+      if (product.stock < quantity) {
+        throw new Error(`Stock insuffisant pour ${product.name}`);
+      }
+
+      const vendorId = product.vendorId;
+      if (!groupedByVendor[vendorId]) {
+        groupedByVendor[vendorId] = [];
+      }
+
+      groupedByVendor[vendorId].push({ product, quantity });
+    }
+
+    const order = await orderRepo.create(
+      {
+        UserId: user.id,
+        vendorId: null,
+        status: "PENDING",
+        total: 0,
+        commission: 0,
+      },
+      { transaction }
+    );
+
+    let orderTotal = 0;
+
+    for (const vendorId of Object.keys(groupedByVendor)) {
+      const itemsForVendor = groupedByVendor[vendorId];
+      let subTotal = 0;
+
+      const subOrder = await SubOrder.create(
+        {
+          OrderId: order.id,
+          vendorId: Number(vendorId),
+          subtotal: 0,
+          status: "PENDING",
+        },
+        { transaction }
+      );
+
+      for (const { product, quantity } of itemsForVendor) {
+        const lineTotal = product.price * quantity;
+        subTotal += lineTotal;
+        orderTotal += lineTotal;
+
+        await orderItemRepo.create(
+          {
+            OrderId: order.id,
+            SubOrderId: subOrder.id,
+            ProductId: product.id,
+            quantity,
+            price: product.price,
+          },
+          { transaction }
+        );
+
+        product.stock -= quantity;
+        await product.save({ transaction });
+      }
+
+      subOrder.subtotal = subTotal;
+      await subOrder.save({ transaction });
+    }
+
+    const commission = Number((orderTotal * COMMISSION_RATE).toFixed(2));
+    order.total = orderTotal;
+    order.commission = commission;
+    await order.save({ transaction });
+
+    return order;
+  });
 };
 
-exports.getOrders = () => {
-  return orderRepo.findAll();
+exports.getOrders = async (user) => {
+  if (user.role === "admin") {
+    return orderRepo.findAllWithDetails();
+  }
+
+  if (user.role === "vendeur") {
+    return orderRepo.findByVendor(user.id);
+  }
+
+  if (user.role === "livreur") {
+    return orderRepo.findByDeliveryPerson(user.id);
+  }
+
+  return orderRepo.findByUser(user.id);
+};
+
+exports.updateOrderStatus = async (user, orderId, status) => {
+  const allowedStatuses = ["PENDING", "PAID", "SHIPPED", "DELIVERED"];
+  if (!allowedStatuses.includes(status)) {
+    throw new Error("Statut invalide");
+  }
+
+  const order = await orderRepo.findById(orderId);
+  if (!order) {
+    throw new Error("Commande introuvable");
+  }
+
+  if (user.role === "client") {
+    if (order.UserId !== user.id) {
+      throw new Error("Accès refusé");
+    }
+    if (status !== "PAID") {
+      throw new Error("Le client ne peut que payer la commande");
+    }
+  }
+
+  if (user.role === "vendeur") {
+    if (order.vendorId !== user.id) {
+      throw new Error("Accès refusé");
+    }
+    if (status !== "SHIPPED") {
+      throw new Error("Le vendeur ne peut que expédier la commande");
+    }
+  }
+
+  if (user.role === "livreur") {
+    if (status !== "DELIVERED") {
+      throw new Error("Le livreur ne peut que marquer la commande comme livrée");
+    }
+  }
+
+  if (user.role === "admin") {
+    // admin peut changer tous les statuts
+  }
+
+  order.status = status;
+  await order.save();
+  return order;
 };

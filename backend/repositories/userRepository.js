@@ -11,3 +11,17 @@ exports.findByEmail = (email) => {
 exports.findAll = () => {
   return User.findAll();
 };
+
+exports.findById = (id) => {
+  return User.findByPk(id);
+};
+
+exports.updateById = async (id, data) => {
+  const user = await User.findByPk(id);
+  if (!user) {
+    return null;
+  }
+
+  await user.update(data);
+  return user;
+};

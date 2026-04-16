@@ -1,0 +1,54 @@
+flowchart LR
+    Client[Client]
+    Vendeur[Vendeur]
+    Livreur[Livreur]
+    Admin[Administrateur]
+
+    UC1((Inscription))
+    UC2((Connexion))
+    UC3((Profil))
+    UC4((Catalogue))
+    UC5((Panier))
+    UC6((Commander))
+    UC7((Paiement))
+    UC8((Commandes))
+    UC9((Suivi livraison))
+    UC10((Ajout produit))
+    UC11((Modification produit))
+    UC12((Stock))
+    UC13((Sous-commandes))
+    UC14((Livraisons))
+    UC15((Statut livraison))
+    UC16((Attribuer livreur))
+    UC17((Utilisateurs))
+    UC18((Statistiques))
+    UC19((Codes invitation))
+
+    Client --- UC1
+    Client --- UC2
+    Client --- UC3
+    Client --- UC4
+    Client --- UC5
+    Client --- UC6
+    Client --- UC7
+    Client --- UC8
+    Client --- UC9
+
+    Vendeur --- UC2
+    Vendeur --- UC3
+    Vendeur --- UC10
+    Vendeur --- UC11
+    Vendeur --- UC12
+    Vendeur --- UC13
+
+    Livreur --- UC2
+    Livreur --- UC3
+    Livreur --- UC14
+    Livreur --- UC15
+
+    Admin --- UC2
+    Admin --- UC3
+    Admin --- UC16
+    Admin --- UC17
+    Admin --- UC18
+    Admin --- UC19

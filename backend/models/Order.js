@@ -6,7 +6,18 @@ const Order = sequelize.define("Order", {
     type: DataTypes.STRING,
     defaultValue: "PENDING",
   },
-  total: DataTypes.FLOAT,
+  total: {
+    type: DataTypes.FLOAT,
+    defaultValue: 0,
+  },
+  commission: {
+    type: DataTypes.FLOAT,
+    defaultValue: 0,
+  },
+  vendorId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 });
 
 module.exports = Order;

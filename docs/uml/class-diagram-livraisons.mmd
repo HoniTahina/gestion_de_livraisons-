@@ -1,0 +1,51 @@
+classDiagram
+    direction LR
+
+    class User {
+      +int id
+      +string name
+      +string email
+      +string role
+    }
+
+    class Product {
+      +int id
+      +string name
+      +float price
+      +int stock
+      +string category
+    }
+
+    class Order {
+      +int id
+      +float total
+      +string status
+      +float commission
+    }
+
+    class SubOrder {
+      +int id
+      +float subtotal
+      +string status
+    }
+
+    class OrderItem {
+      +int id
+      +int quantity
+      +float price
+    }
+
+    class Delivery {
+      +int id
+      +string status
+      +string trackingToken
+    }
+
+    User "1" --> "0..*" Order : passe
+    User "1" --> "0..*" Product : vend
+    Order "1" --> "1..*" SubOrder : split
+    Order "1" --> "1..*" OrderItem : contient
+    SubOrder "1" --> "0..*" OrderItem : regroupe
+    Product "1" --> "0..*" OrderItem : reference
+    SubOrder "1" --> "0..1" Delivery : livre
+    User "1" --> "0..*" Delivery : assigne

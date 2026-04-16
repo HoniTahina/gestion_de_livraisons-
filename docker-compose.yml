@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: delivery_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-delivery_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    container_name: delivery_backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DB_NAME: ${DB_NAME:-delivery_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-change_me}
+      PORT: 5000
+      AUTO_DB_BACKUP: "false"
+      DB_ALTER: "true"
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: delivery_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:5000
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

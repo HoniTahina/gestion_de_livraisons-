@@ -17,7 +17,7 @@ exports.updateStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const delivery = await deliveryService.updateStatus(id, status);
+    const delivery = await deliveryService.updateStatus(req.user, id, status);
 
     res.json(delivery);
   } catch (err) {
@@ -26,6 +26,6 @@ exports.updateStatus = async (req, res) => {
 };
 
 exports.getDeliveries = async (req, res) => {
-  const deliveries = await deliveryService.getDeliveries();
+  const deliveries = await deliveryService.getDeliveries(req.user);
   res.json(deliveries);
 };
