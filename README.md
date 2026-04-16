@@ -1,69 +1,51 @@
 # Plateforme de gestion de livraisons multi-vendeurs
 
-Projet conforme au cas pratique d'architecture n-tiers.
+## Equipe
 
-## 1) Architecture n-tiers
+- Tahina HONI RIKA
+- Houda Ouadah
 
-- Presentation: `frontend/` (React + Vite)
-- Logique metier: `backend/controllers`, `backend/services`
-- Acces donnees: `backend/repositories`, `backend/models` (Sequelize)
+## Contexte
 
-## 2) API REST
+Ce projet repond au sujet d'architecture n-tiers : creer une plateforme web de gestion de livraisons entre clients, vendeurs, livreurs et administrateurs.
 
-- `POST /auth/register`, `POST /auth/login`
-- `GET/POST/PUT /products`
-- `POST/GET/PUT /orders`
-- `POST/GET/PUT /deliveries`
-- `GET/PUT /users/me`
-- `GET /admin/stats`
+## Ce qu'on a realise
 
-## 3) Regles metier implementees
+On a developpe une application complete avec :
+- un frontend web
+- un backend API
+- une base de donnees PostgreSQL
 
-- Split automatique des commandes par vendeur (`SubOrder`)
-- Verrouillage transactionnel des produits pour proteger le stock en concurrence
-- Limite de 3 livraisons actives par livreur
-- Commission plateforme (5%)
+Le projet suit une architecture n-tiers avec separation claire entre presentation, logique metier et acces aux donnees.
 
-## 4) Temps reel
+## Fonctionnalites principales
 
-- SSE: `GET /events`
-- WebSocket: `ws://localhost:5000/ws`
+- gestion des comptes (inscription, connexion, roles, profil)
+- gestion des produits (ajout, modification, categories, stock)
+- panier et commandes multi-vendeurs
+- paiement simule avec statuts de commande
+- detection du type de carte selon le numero saisi
+- gestion des livraisons (attribution livreur + suivi)
+- administration (utilisateurs, statistiques, codes d'invitation)
 
-## 5) Tests
+Precisions inscription :
+- un client peut s'inscrire normalement
+- vendeur et livreur s'inscrivent avec un code d'invitation envoye par l'administration
 
-Dans `backend/`:
+## Regles metier prises en compte
 
-- `npm run test:unit`
-- `npm run test:integration`
-- `npm test`
+- split des commandes par vendeur
+- gestion du stock en concurrence
+- limite des livraisons actives par livreur
+- commission plateforme
 
-## 6) Lancement local
+## Conception, tests et bonus
 
-### Backend
+- diagrammes UML realises
+- tests unitaires et d'integration
+- bonus realises : WebSocket, SSE, Docker, CI/CD, cache simple
 
-1. Creer `backend/.env` avec:
-   - `DB_NAME=delivery_db`
-   - `DB_USER=postgres`
-   - `DB_PASS=postgres`
-   - `JWT_SECRET=...`
-2. `cd backend`
-3. `npm install`
-4. `npm run dev`
+## Limites
 
-### Frontend
-
-1. Creer `frontend/.env` avec:
-   - `VITE_API_URL=http://localhost:5000`
-   - `VITE_PAYPAL_URL=https://www.paypal.com`
-2. `cd frontend`
-3. `npm install`
-4. `npm run dev`
-
-## 7) Docker
-
-- `docker compose up --build`
-
-## 8) CI/CD
-
-- Workflow GitHub Actions: `.github/workflows/ci.yml`
-- Build frontend + tests backend automatiques sur push et pull request.
+- pas d'application mobile native dans ce depot
+- paiement simule (pas de passerelle bancaire reelle)
