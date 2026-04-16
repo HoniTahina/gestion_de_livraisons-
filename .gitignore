@@ -4,3 +4,8 @@ backend/.env
 frontend/.env
 backend/coverage/
 frontend/dist/
+backend/backups/*.sql
+*-startup.out.log
+*-startup.err.log
+frontend/*.out.log
+frontend/*.err.log
